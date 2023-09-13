@@ -1,22 +1,18 @@
 package com.musongzi.waveline.ui
 
-import android.content.Context.VIBRATOR_SERVICE
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.Vibrator
 import android.view.View
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat.getSystemService
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.musongzi.waveline.R
-import com.musongzi.waveline.databinding.ActivityPathTest2Binding
 import com.musongzi.waveline.databinding.ActivityPathTestBinding
-import com.musongzi.waveline.ui.WaveLineView.Companion.simpleSetting
+import com.musongzi.waveline.ui.WaveLineView.Companion.createSampleCallBack
 
 
 class PathTestActivity : AppCompatActivity() {
@@ -39,7 +35,7 @@ class PathTestActivity : AppCompatActivity() {
             handler.removeCallbacksAndMessages(null)
             if (value in 0..120) {
                 field = value
-                waveCallBack?.valueChangeByAutomaticInvalidate(field)
+                waveCallBack?.changeValuesAndInvalidate(field)
                 if (Thread.currentThread() != Looper.getMainLooper().thread) {
                     runOnUiThread {
                         dataBinding.idDbTv.text = "$value DB"
@@ -82,7 +78,7 @@ class PathTestActivity : AppCompatActivity() {
 //        dbTv = findViewById(R.id.id_db_tv)
 //        waveLineView = findViewById(R.id.id_lineview)
 //
-        waveCallBack = dataBinding.idLineview.simpleSetting()
+        waveCallBack = dataBinding.idLineview.createSampleCallBack()
 
 
         dataBinding.idMarkLineView.canvasTask.setTextColor(Color.WHITE)

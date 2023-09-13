@@ -7,7 +7,6 @@ import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
 import com.musongzi.waveline.R
 import com.musongzi.waveline.databinding.ActivityPathTest2Binding
-import com.musongzi.waveline.ui.WaveLineView.Companion.simpleSetting
 
 class PathTest2Activity : AppCompatActivity() {
 
@@ -21,7 +20,7 @@ class PathTest2Activity : AppCompatActivity() {
         dataBinding.idLineview.setInnerBgColor(ActivityCompat.getColor(this, R.color.teal_700))
         dataBinding.idLineview.setWaveLineColor(ActivityCompat.getColor(this, R.color.purple_200))
         dataBinding.idLineview.setWaveLineWidth(5f)
-        dataBinding.idLineview.simpleSetting(100)
+
 
 
         dataBinding.idMarkLineView.canvasTask.setTextColor(Color.WHITE)

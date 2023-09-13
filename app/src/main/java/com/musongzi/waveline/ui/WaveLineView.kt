@@ -235,6 +235,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
             thisYValue = IntArray(size)
             Log.i(TAG, "onDraw: mumber = $number , size = $size , size * mumber = ${size * number}")
             initYValue()
+            waveCallBack?.onFirstDraw(size)
             if (automaticInvalidate && !pathThread.isInterrupted) {
                 pathThread.start()
             }
@@ -256,7 +257,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
             var endIndex = yValue.size
             for (index in yValue.indices) {
                 val newValue = yRealValue[index]
-                if (newValue == Int.MIN_VALUE) {
+                if (newValue == EMPTY_VALUE) {
                     endIndex = index + 1
                     break
                 }
@@ -278,7 +279,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
             var endIndex = yValue.size
             for (index in yValue.indices) {
                 val newValue = getRealMixMusicDBYvalue(index)
-                if (newValue == Int.MIN_VALUE) {
+                if (newValue == EMPTY_VALUE) {
                     endIndex = index + 1
                     break
                 }
@@ -403,8 +404,9 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
 
     /**
      * 音量改变
+     * 要在onresume中使用
      */
-    private fun changeMusicDB(value: Int) {
+    fun changeMusicDB(value: Int) {
 
         val state = (context as? LifecycleOwner)?.lifecycle?.currentState
         state?.apply {
@@ -497,7 +499,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
      */
     private fun dbValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int {
 
-        return (waveCallBack?.onDbValueChange(db, lastValues, index, size) ?: defaultValueChange(db, lastValues, index, size)).let {
+        return (waveCallBack?.onValueChange(db, lastValues, index, size) ?: defaultValueChange(db, lastValues, index, size)).let {
             if (it >= height) {
                 height - lineWidth
             } else if (it <= 0) {
@@ -562,19 +564,21 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
         const val CLOSE_START_AND_END_POINT = 2
         const val CLOSE_END_POINT = 3
 
+        const val EMPTY_VALUE = Int.MIN_VALUE
 
-        fun WaveLineView.simpleSetting(firstLSet: Int = 0): WaveCallBack {
+        /**
+         * 最简单模式
+         */
+        fun WaveLineView.createSampleCallBack(firstLSet: Int = 0): WaveCallBack {
 
 
             val callBack = object : WaveCallBack {
 
-                override fun onDbValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int {
+                override fun onValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int {
                     return defaultValueChange(db, lastValues, index, size)
                 }
 
-                override fun initRealValue(index: Int) = 0
-
-                override fun valueChangeByAutomaticInvalidate(value: Int) {
+                override fun changeValuesAndInvalidate(value: Int) {
                     if (automaticInvalidate) {
                         changeMusicDB(value)
                     }
@@ -585,7 +589,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
             (context as? LifecycleOwner)?.lifecycle?.addObserver(object : DefaultLifecycleObserver {
                 override fun onResume(owner: LifecycleOwner) {
                     post {
-                        callBack.valueChangeByAutomaticInvalidate(firstLSet)
+                        callBack.changeValuesAndInvalidate(firstLSet)
                     }
                     owner.lifecycle.removeObserver(this)
                 }
@@ -599,9 +603,15 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
     }
 
     interface WaveCallBack {
-        fun onDbValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int
-        fun initRealValue(index: Int): Int
-        fun valueChangeByAutomaticInvalidate(value: Int)
+        fun onValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int
+
+        fun initRealValue(index: Int): Int{
+            return 0;
+        }
+        fun changeValuesAndInvalidate(value: Int)
+        fun onFirstDraw(size: Int) {
+
+        }
     }
 
     interface ExecuteListner {
