@@ -12,7 +12,7 @@ class MarkLineTask(canvas: IDrawView) : CanvasTask(canvas) {
     private val textPaint = Paint().apply {
         color = Color.BLACK
         style = Paint.Style.FILL
-        textSize = (getHodlerContext().resources.displayMetrics.densityDpi / 160 * 10).toFloat()
+        textSize = (getHodlerContext().resources.displayMetrics.densityDpi / 160 * 20).toFloat()
         isDither = true
         //抗锯齿，降低分辨率，提高绘制效率
         isAntiAlias = true
@@ -23,7 +23,7 @@ class MarkLineTask(canvas: IDrawView) : CanvasTask(canvas) {
         color = Color.parseColor("#cccccc")
         style = Paint.Style.STROKE
         strokeWidth = 5f
-        pathEffect = DashPathEffect(floatArrayOf(3f, 10f), 0f)
+        pathEffect = DashPathEffect(floatArrayOf(3f, 15f), 0f)
         isDither = true
         //抗锯齿，降低分辨率，提高绘制效率
         //抗锯齿，降低分辨率，提高绘制效率
