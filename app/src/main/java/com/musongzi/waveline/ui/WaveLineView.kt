@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.util.AttributeSet
 import android.util.Log
+import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
@@ -17,7 +18,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.OnLifecycleEvent
 
 
-class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(context, attrs), Runnable, LifecycleObserver {
+class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attrs), Runnable, LifecycleObserver {
 
 //    override fun invalidate() {
 //        super.invalidate()
@@ -165,7 +166,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
         if (layoutParams == null) {
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, generatedDefaultHeight())
         } else {
-            val size = MeasureSpec.getSize(layoutParams.height)
+            val size = View.MeasureSpec.getSize(layoutParams.height)
             if (size == 0) {
                 layoutParams.height = generatedDefaultHeight()
             }
@@ -215,6 +216,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
         for (index in 1..xMaxSize) {
             canvas.drawLine(100f * index, height - 10f, 100f * index, 0f, strokePaint)
         }
+
         //初始化参数，这里可以拿到高度
         if (!this::yRealValue.isInitialized) {
 

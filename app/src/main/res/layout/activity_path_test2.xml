@@ -16,9 +16,13 @@
         <com.musongzi.waveline.ui.WaveLineView
             android:id="@+id/id_lineview"
             android:layout_width="match_parent"
-            android:layout_margin="10dp"
-            android:layout_height="150dp" />
+            android:layout_height="150dp"
+            android:layout_margin="10dp" />
 
-
+        <com.musongzi.waveline.ui.MarkLineView
+            android:id="@+id/id_markLineView"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:layout_margin="10dp" />
     </RelativeLayout>
 </layout>

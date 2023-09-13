@@ -21,5 +21,9 @@ class PathTest2Activity : AppCompatActivity() {
         dataBinding.idLineview.setWaveLineColor(ActivityCompat.getColor(this,R.color.purple_200))
         dataBinding.idLineview.setWaveLineWidth(5f)
         dataBinding.idLineview.simpleSetting(100)
+
+
+//        dataBinding.idMarkLineView.canvasTask.valueArray
+
     }
 }
