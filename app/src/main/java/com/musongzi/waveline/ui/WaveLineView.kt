@@ -247,9 +247,9 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
             canvas.drawPath(path, wavePaint)
             canvas.drawPath(path, paintBg)
         }
-//        for (index in 1..10) {
-//            canvas.drawLine(100f * index, height - 10f, 100f * index, 0f, strokePaint)
-//        }
+        for (index in 1..xMaxSize) {
+            canvas.drawLine(100f * index, height - 10f, 100f * index, 0f, strokePaint)
+        }
     }
 
     private fun handlerPathLocation(isInvalidate: Boolean = false) {
@@ -416,21 +416,21 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
                 height
             } else if (index < _11) {
                 //当x在小于1/5范畴内时；对应（index,y）中 y值 = 高度(height) * 分贝的占比(db / 120f) * 随机小数范围（0.15 - 0.35）
-                (startHeight - db / 120f * height * (Math.random() * 0.2 + 0.15)).toInt()
+                (startHeight - db / 150f * height * (Math.random() * 0.3 + 0.6)).toInt()
             } else if (index >= _11 && index < _44 && Math.random() > 0.80) {
                 //当x标在大于等于1/5 并且 小于 4/5 && 有百分之80%概率选中的 范畴内时；
                 // 对应（index,y）中 y值 = 高度(height) * 分贝的占比(db / 120f) * 随机小数范围（0.5 - 0.8）
-                (startHeight - db / 120f * height * (Math.random() * 0.3 + 0.5)).toInt()
+                (startHeight - db / 150f * height * (Math.random() * 0.3 + 0.5)).toInt()
             } else if (index >= _33 && index < _55 && Math.random() > 0.6) {
-                (startHeight - db / 120f * height * (Math.random() * 0.2 + 0.3)).toInt() // 0.3 - 0.5
+                (startHeight - db / 150f * height * (Math.random() * 0.2 + 0.7)).toInt() // 0.3 - 0.5
             } else {
-                (startHeight - db / 120f * height * (Math.random() + 0.15)).toInt() // 0 - 0.15
+                (startHeight - db / 150f * height * (Math.random() + 0.8)).toInt() // 0 - 0.15
             }
         }).let {
             if (it >= height) {
                 height - lineWidth
             } else if (it <= 0) {
-                0 + lineWidth
+                (0 + Math.random() * 10).toInt()
             } else {
                 it
             }
