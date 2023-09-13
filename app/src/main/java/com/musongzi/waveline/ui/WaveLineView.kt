@@ -15,20 +15,23 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.OnLifecycleEvent
+import kotlin.math.log
 
 
 class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attrs), Runnable, LifecycleObserver {
 
-    override fun invalidate() {
-        super.invalidate()
-    }
+//    override fun invalidate() {
+//        super.invalidate()
+//    }
 
     var automaticInvalidate: Boolean = true
     var pointMode: Int = UN_CLOSE_POINT
 
     private val defaultHeightDp = 80
     private var valuesYValueAnimator: ValueAnimator? = null
-    private var resume = false
+
+    private var lifeState = 0
+
     private var path = Path()
 
     private val lock = Object()
@@ -69,7 +72,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
     private val animMoveAllTime = 400f
     val limiTime = 200L
     private var lastTime = 0L
-    private var lineWidth = 2
+    private val lineWidth = 2
 
 
     /**
@@ -111,28 +114,43 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
         wavePaint.color = color
     }
 
-    fun setInnerBgColor(color: Int) {
+    fun setWaveLineWidth(width: Float) {
+        wavePaint.strokeWidth = width
+    }
 
+    fun setInnerBgColor(color: Int) {
         paintBg.color = color
     }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
     fun onActivityResume() {
         synchronized(lock) {
-            resume = true
-//            valuesYValueAnimator.start()
+            lifeState = 1
             lock.notify()
         }
+        Log.i(TAG, "onActivityResume: ")
     }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
     fun onActivityStop() {
         valuesYValueAnimator?.pause()
-        resume = false
+        synchronized(lock) {
+            lifeState = 0
+        }
+        Log.i(TAG, "onActivityStop: ")
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    fun onActivityDeStroy() {
+        synchronized(lock) {
+            automaticInvalidate = false
+            lock.notify()
+        }
+        Log.i(TAG, "onActivityDeStroy: ")
     }
 
     init {
-        (context as LifecycleOwner).apply {
+        (context as? LifecycleOwner)?.apply {
             lifecycle.addObserver(this@WaveLineView)
         }
         if (layoutParams == null) {
@@ -150,9 +168,13 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
     var musicDb: Int = 0
         set(value) {
 
-            if ((context as? LifecycleOwner)?.lifecycle?.currentState != Lifecycle.State.RESUMED) {
-                return
+            val state = (context as? LifecycleOwner)?.lifecycle?.currentState
+            state?.apply {
+                if (this != Lifecycle.State.RESUMED) {
+                    return
+                }
             }
+
 
             val thisTime = System.currentTimeMillis()
             if (thisTime - lastTime <= limiTime) {
@@ -168,9 +190,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
             } else {
                 value
             }
-//            resetYvalue(field)
             changeMusicDB(field)
-
         }
 
 
@@ -243,18 +263,24 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
     override fun run() {
 
         while (automaticInvalidate) {
+
             handlerPathLocation()
-            if ((context as LifecycleOwner).lifecycle.currentState != Lifecycle.State.RESUMED) {
+            if (lifeState == 0) {
                 synchronized(lock) {
-                    lock.wait()
+                    if(lifeState == 0 && automaticInvalidate) {
+                        Log.i(TAG, "run: thread lock.wait()")
+                        lock.wait()
+                    }
                 }
-            } else {
+            } else if(lifeState == 1){
+                Log.i(TAG, "run: post invalidate()")
                 post {
                     invalidate()
                 }
+                Thread.sleep(sleepTime)
             }
-            Thread.sleep(sleepTime)
         }
+        Log.i(TAG, "run: handlerPathLocation end invalidate()")
     }
 
     /**
@@ -283,18 +309,18 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
 
             if (x1 != 0f && x1 != sumX1) {
                 path.quadTo(sumX1, sumY1, (sumX1 + x2) / 2, (sumY1 + y2) / 2)
-                Log.i(TAG, "sumFiveMethod: 1 path.quadTo($sumX1, $sumY1, ${(sumX1 + x2) / 2}, ${(sumY1 + y2) / 2})")
+//                Log.i(TAG, "sumFiveMethod: 1 path.quadTo($sumX1, $sumY1, ${(sumX1 + x2) / 2}, ${(sumY1 + y2) / 2})")
 //                path.lineTo(x2, y2)
             } else {
                 path.lineTo(cX, cY)
-                Log.i(TAG, "sumFiveMethod: 2 path.lineTo($cX, $cY)")
+//                Log.i(TAG, "sumFiveMethod: 2 path.lineTo($cX, $cY)")
             }
 
 
 
             if (index + 1 >= yValue.size) {
                 path.lineTo(x2, y2)
-                Log.i(TAG, "sumFiveMethod: 3 path.lineTo($x2, $y2)")
+//                Log.i(TAG, "sumFiveMethod: 3 path.lineTo($x2, $y2)")
                 break
             }
 
@@ -306,12 +332,12 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
             val aY = (y2 + y3) / 2f
 
             path.quadTo(x2, y2, aX, aY)
-            Log.i(TAG, "sumFiveMethod: 4 path.quadTo($x2, $y2, $aX, $aY)")
+//            Log.i(TAG, "sumFiveMethod: 4 path.quadTo($x2, $y2, $aX, $aY)")
 
             if (index + 2 < yValue.size) {
                 if ((y3 < y2 && getRealYvalue(yValue, index + 2) < y3) || (y3 > y2 && getRealYvalue(yValue, index + 2) > y3)) {
                     path.lineTo(x3, y3)
-                    Log.i(TAG, "sumFiveMethod: 5 path.lineTo($x3, $y3)")
+//                    Log.i(TAG, "sumFiveMethod: 5 path.lineTo($x3, $y3)")
                     x1 = x3
                     y1 = y3
                 } else {
