@@ -18,7 +18,7 @@ import androidx.lifecycle.OnLifecycleEvent
 import kotlin.math.log
 
 
-class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attrs), Runnable, LifecycleObserver {
+class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(context, attrs), Runnable, LifecycleObserver {
 
 //    override fun invalidate() {
 //        super.invalidate()

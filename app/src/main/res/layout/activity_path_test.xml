@@ -7,7 +7,6 @@
     android:background="#1A2D41">
 
 
-
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -20,7 +19,7 @@
             android:background="#335E76FF"
             android:elevation="10dp"
             android:gravity="center"
-            android:minWidth="100dp"
+            android:minWidth="60dp"
             android:onClick="lowClick"
             android:padding="10dp"
             android:text="低"
@@ -34,7 +33,7 @@
             android:background="#995E76FF"
             android:elevation="10dp"
             android:gravity="center"
-            android:minWidth="100dp"
+            android:minWidth="60dp"
             android:onClick="midClick"
             android:padding="10dp"
             android:text="中"
@@ -44,33 +43,84 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
             android:background="#5E76FF"
             android:elevation="10dp"
             android:gravity="center"
-            android:minWidth="100dp"
+            android:minWidth="60dp"
             android:onClick="hightClick"
             android:padding="10dp"
             android:text="高"
             android:textColor="#ffffff"
             android:textSize="15dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#5E76FF"
+            android:elevation="10dp"
+            android:gravity="center"
+            android:minWidth="60dp"
+            android:onClick="autoClick"
+            android:padding="10dp"
+            android:text="自动"
+            android:textColor="#ffffff"
+            android:textSize="15dp" />
+
     </LinearLayout>
 
-<!--    <com.bullhead.androidequalizer.waveview.Wave33View-->
-<!--        android:id="@+id/id_Wave33View"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="150dp"/>-->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="150dp">
+
+        <TextView
+            android:id="@+id/id_jian"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#335E76FF"
+            android:elevation="10dp"
+            android:gravity="center"
+            android:minWidth="60dp"
+            android:onClick="jiaClick"
+            android:padding="10dp"
+            android:text="加"
+            android:textColor="#ffffff"
+            android:textSize="15dp" />
+
+        <TextView
+            android:id="@+id/id_jia"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#335E76FF"
+            android:elevation="10dp"
+            android:gravity="center"
+            android:minWidth="60dp"
+            android:onClick="jianClick"
+            android:padding="10dp"
+            android:text="减"
+            android:textColor="#ffffff"
+            android:textSize="15dp" />
+
+    </LinearLayout>
+
+    <!--    <com.bullhead.androidequalizer.waveview.Wave33View-->
+    <!--        android:id="@+id/id_Wave33View"-->
+    <!--        android:layout_width="match_parent"-->
+    <!--        android:layout_height="150dp"/>-->
 
 
     <TextView
         android:id="@+id/id_db_tv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="0db"
+        android:layout_above="@+id/id_lineview"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="20dp"
+        android:text="0db"
         android:textColor="@color/white"
-        android:textSize="20dp"
-        android:layout_above="@+id/id_lineview"/>
+        android:textSize="20dp" />
 
     <com.musongzi.waveline.ui.WaveLineView
         android:id="@+id/id_lineview"
