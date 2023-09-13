@@ -35,7 +35,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
     private val lock = Object()
 //    private lateinit var mRandom: java.util.Random
 
-    var mOnDbChangeListner: OnDbChangeListner? = null
+    var waveCallBack: WaveCallBack? = null
 
     var executeListner: ExecuteListner? = null
 
@@ -75,11 +75,12 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
     private var xMaxSize = 0
     private val sleepTime = 50L
     private val animMoveAllTime = 400f
+    private val animMoveAllTime_2 = 600
     val limiTime = 200L
     private var lastTime = 0L
     private val lineWidth = 2
 
-    private val pathThread = Thread(this,"wavePathName")
+    private val pathThread = Thread(this, "wavePathName")
 
 
     /**
@@ -172,7 +173,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
 
     private fun generatedDefaultHeight() = (defaultHeightDp * context.resources.displayMetrics.densityDpi / 160f).toInt()
 
-    var musicDb: Int = 0
+    private var musicDb: Int = 0
         set(value) {
 
             val state = (context as? LifecycleOwner)?.lifecycle?.currentState
@@ -184,8 +185,13 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
 
 
             val thisTime = System.currentTimeMillis()
-            if (thisTime - lastTime <= limiTime) {
+            var sum = thisTime - lastTime
+            if (sum <= limiTime) {
                 return
+            }else if(sum >= animMoveAllTime_2){
+                synchronized(lock){
+                    lock.notify()
+                }
             }
 
             lastTime = thisTime
@@ -211,16 +217,17 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
         }
         synchronized(lock) {
             var i = 0
+            val startHeight = (if (startHeight == 0f) height.apply {
+                startHeight = this.toFloat()
+            } else startHeight).toInt()
+            Log.i(TAG, "initYValue: startHeight = $startHeight")
             for (index in yValue.indices) {
-                if (mOnDbChangeListner == null) {
-                    val sunHeight = if (startHeight == 0f) height.toFloat() else startHeight
-                    if (startHeight == 0f) {
-                        startHeight = sunHeight
-                    }
-                    i = (startHeight - 1).toInt()
+                i = if (waveCallBack == null) {
+                    startHeight - 1
                 } else {
-                    i = mOnDbChangeListner!!.initRealValue(index)
+                    startHeight - waveCallBack!!.initRealValue(index)
                 }
+                Log.i(TAG, "initYValue: index = $index , value = $i")
                 yValue[index] = i
                 yRealValue[index] = i
             }
@@ -264,7 +271,6 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
 
 
     fun handlerPathLocationReal() {
-//        if(Thread.currentThread() != Mai)
         synchronized(lock) {
             automaticInvalidate = false
             path.reset()
@@ -284,12 +290,10 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
                 path.close()
             }
         }
-//        if (isInvalidate) {
         invalidate()
-//        }
     }
 
-    private fun handlerPathLocation(isInvalidate: Boolean = false) {
+    private fun handlerPathLocation() {
         synchronized(lock) {
             path.reset()
             var endIndex = yValue.size
@@ -308,9 +312,6 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
                 path.close()
             }
         }
-        if (isInvalidate) {
-            invalidate()
-        }
     }
 
     override fun run() {
@@ -326,6 +327,13 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
                     }
                 }
             } else if (lifeState == 1) {
+
+                if(System.currentTimeMillis() - lastTime >= animMoveAllTime_2){
+                    synchronized(lock){
+                        Log.i(TAG, "run: post invalidate() but no busy")
+                        lock.wait()
+                    }
+                }
                 Log.i(TAG, "run: post invalidate()")
                 post {
                     invalidate()
@@ -436,39 +444,46 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
         Log.i(TAG, "changeMusicDB: musicdb = $field")
     }
 
+    private fun defaultValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int {
+
+        //将x轴拆分成5份
+        val _11 = xMaxSize / 5f
+        val _22 = _11 * 2
+        val _33 = _11 * 3
+        val _44 = _11 * 4
+        val _55 = _11 * 5
+
+        /**
+         * 检查下标
+         */
+        val value =  if (checkPointState(index)) {
+            height
+        } else if (index < _11) {
+            //当x在小于1/5范畴内时；对应（index,y）中 y值 = 高度(height) * 分贝的占比(db / 120f) * 随机小数范围（0.15 - 0.35）
+            (startHeight - db / 150f * height * (Math.random() * 0.3 + 0.6)).toInt()
+        } else if (index >= _11 && index < _44 && Math.random() > 0.80) {
+            //当x标在大于等于1/5 并且 小于 4/5 && 有百分之80%概率选中的 范畴内时；
+            // 对应（index,y）中 y值 = 高度(height) * 分贝的占比(db / 120f) * 随机小数范围（0.5 - 0.8）
+            (startHeight - db / 150f * height * (Math.random() * 0.3 + 0.5)).toInt()
+        } else if (index >= _33 && index < _55 && Math.random() > 0.6) {
+            (startHeight - db / 150f * height * (Math.random() * 0.2 + 0.7)).toInt() // 0.3 - 0.5
+        } else {
+            (startHeight - db / 150f * height * (Math.random() + 0.8)).toInt() // 0 - 0.15
+        }
+
+        Log.i(TAG, "defaultValueChange: db = $db , value = $value , startHeight = $startHeight , height = $height")
+        return value
+
+    }
+
     /**
      * 赋值最终的[yRealValue]的y值
-     * 如果实现了 [mOnDbChangeListner] 那么自己实现数组对应下表的值算法，如果为空则默认实现算法
+     * 如果实现了 [waveCallBack] 那么自己实现数组对应下表的值算法，如果为空则默认实现算法
      *
      */
     private fun dbValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int {
 
-        return (mOnDbChangeListner?.onDbValueChange(db, lastValues, index, size) ?: let {
-            //将x轴拆分成5份
-            val _11 = xMaxSize / 5f
-            val _22 = _11 * 2
-            val _33 = _11 * 3
-            val _44 = _11 * 4
-            val _55 = _11 * 5
-
-            /**
-             * 检查下标
-             */
-            if (checkPointState(index)) {
-                height
-            } else if (index < _11) {
-                //当x在小于1/5范畴内时；对应（index,y）中 y值 = 高度(height) * 分贝的占比(db / 120f) * 随机小数范围（0.15 - 0.35）
-                (startHeight - db / 150f * height * (Math.random() * 0.3 + 0.6)).toInt()
-            } else if (index >= _11 && index < _44 && Math.random() > 0.80) {
-                //当x标在大于等于1/5 并且 小于 4/5 && 有百分之80%概率选中的 范畴内时；
-                // 对应（index,y）中 y值 = 高度(height) * 分贝的占比(db / 120f) * 随机小数范围（0.5 - 0.8）
-                (startHeight - db / 150f * height * (Math.random() * 0.3 + 0.5)).toInt()
-            } else if (index >= _33 && index < _55 && Math.random() > 0.6) {
-                (startHeight - db / 150f * height * (Math.random() * 0.2 + 0.7)).toInt() // 0.3 - 0.5
-            } else {
-                (startHeight - db / 150f * height * (Math.random() + 0.8)).toInt() // 0 - 0.15
-            }
-        }).let {
+        return (waveCallBack?.onDbValueChange(db, lastValues, index, size) ?: defaultValueChange(db, lastValues, index, size)).let {
             if (it >= height) {
                 height - lineWidth
             } else if (it <= 0) {
@@ -532,11 +547,37 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
         const val CLOSE_START_POINT = 1
         const val CLOSE_START_AND_END_POINT = 2
         const val CLOSE_END_POINT = 3
+
+
+        fun WaveLineView.simpleSetting():WaveCallBack {
+
+//            automaticInvalidate = false
+
+            waveCallBack = object : WaveCallBack {
+
+                override fun onDbValueChange(db: Int, lastValues: Int, index: Int, size: Int):Int {
+                   return defaultValueChange(db, lastValues, index, size)
+                }
+
+                override fun initRealValue(index: Int) = 0
+
+                override fun valueChangeByAutomaticInvalidate(value: Int) {
+                    if (automaticInvalidate) {
+                        musicDb = value
+                    }
+                }
+
+            }
+
+            return waveCallBack!!
+        }
+
     }
 
-    interface OnDbChangeListner {
+    interface WaveCallBack {
         fun onDbValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int
         fun initRealValue(index: Int): Int
+        fun valueChangeByAutomaticInvalidate(value: Int)
     }
 
     interface ExecuteListner {

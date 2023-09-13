@@ -1,5 +1,6 @@
 package com.musongzi.waveline.ui
 
+import android.content.Context.VIBRATOR_SERVICE
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -7,9 +8,11 @@ import android.os.Vibrator
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.musongzi.waveline.R
+import com.musongzi.waveline.ui.WaveLineView.Companion.simpleSetting
 
 
 class PathTestActivity : AppCompatActivity() {
@@ -24,12 +27,14 @@ class PathTestActivity : AppCompatActivity() {
 
     val handler = Handler(Looper.getMainLooper())
 
+    var waveCallBack: WaveLineView.WaveCallBack? = null
+
     private var musicDb = -1
         set(value) {
             handler.removeCallbacksAndMessages(null)
             if (value in 0..120) {
                 field = value
-                waveLineView.musicDb = field
+                waveCallBack?.valueChangeByAutomaticInvalidate(field)
                 if (Thread.currentThread() != Looper.getMainLooper().thread) {
                     runOnUiThread {
                         dbTv.text = "$value DB"
@@ -69,6 +74,8 @@ class PathTestActivity : AppCompatActivity() {
         view = findViewById(R.id.id_lineview)
         dbTv = findViewById(R.id.id_db_tv)
         waveLineView = findViewById(R.id.id_lineview)
+
+        waveCallBack = waveLineView.simpleSetting()
 
         runningMusicSet()
     }
