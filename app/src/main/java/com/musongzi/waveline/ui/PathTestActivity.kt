@@ -15,7 +15,7 @@ class PathTestActivity : AppCompatActivity() {
 
     lateinit var view: View
     lateinit var waveLineView: WaveLineView
-    lateinit var dbTv : TextView
+    lateinit var dbTv: TextView
     private var progress = 0f // 当前进度
     var click = false
 
@@ -32,7 +32,7 @@ class PathTestActivity : AppCompatActivity() {
     }
 
     private fun runningMusicSet() {
-        lifecycle.addObserver(object :DefaultLifecycleObserver{
+        lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onResume(owner: LifecycleOwner) {
                 Thread {
                     while (true) {
@@ -41,7 +41,7 @@ class PathTestActivity : AppCompatActivity() {
                             click = false
                         }
 
-                        Thread.sleep(500)
+                        Thread.sleep((((Math.random() * 0.1 + 0.2) * 400).toLong()))
                         waveLineView.musicDb = (Math.random() * 120).toInt().apply {
                             runOnUiThread {
                                 dbTv.text = "${this@apply} DB"
