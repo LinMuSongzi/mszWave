@@ -10,6 +10,7 @@ import android.graphics.Path
 import android.util.AttributeSet
 import android.util.Log
 import android.view.ViewGroup
+import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -31,7 +32,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
     private var lifeState = 0
 
     private var path = Path()
-
+    private var pathBg = Path()
     private val lock = Object()
 //    private lateinit var mRandom: java.util.Random
 
@@ -169,42 +170,17 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
                 layoutParams.height = generatedDefaultHeight()
             }
         }
+//        startHeight = MeasureSpec.getSize(layoutParams.height).toFloat()
     }
 
     private fun generatedDefaultHeight() = (defaultHeightDp * context.resources.displayMetrics.densityDpi / 160f).toInt()
 
-    private var musicDb: Int = 0
-        set(value) {
-
-            val state = (context as? LifecycleOwner)?.lifecycle?.currentState
-            state?.apply {
-                if (this != Lifecycle.State.RESUMED) {
-                    return
-                }
-            }
-
-
-            val thisTime = System.currentTimeMillis()
-            var sum = thisTime - lastTime
-            if (sum <= limiTime) {
-                return
-            }else if(sum >= animMoveAllTime_2){
-                synchronized(lock){
-                    lock.notify()
-                }
-            }
-
-            lastTime = thisTime
-
-            field = if (value >= 120) {
-                120
-            } else if (value < 0) {
-                0
-            } else {
-                value
-            }
-            changeMusicDB(field)
-        }
+//    private var musicDb: Int = 0
+//        set(value) {
+//
+//
+//            changeMusicDB(field)
+//        }
 
 //    fun change
 
@@ -236,6 +212,9 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
 
 
     override fun onDraw(canvas: Canvas) {
+        for (index in 1..xMaxSize) {
+            canvas.drawLine(100f * index, height - 10f, 100f * index, 0f, strokePaint)
+        }
         //初始化参数，这里可以拿到高度
         if (!this::yRealValue.isInitialized) {
 
@@ -260,11 +239,9 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
         }
         synchronized(lock) {
             canvas.drawPath(path, wavePaint)
-            canvas.drawPath(path, paintBg)
+            canvas.drawPath(pathBg, paintBg)
         }
-        for (index in 1..xMaxSize) {
-            canvas.drawLine(100f * index, height - 10f, 100f * index, 0f, strokePaint)
-        }
+
     }
 
 //    fun
@@ -307,9 +284,12 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
             }
             sumFiveMethod(thisYValue, endIndex)
             if (pointMode == UN_CLOSE_POINT) {
-                path.lineTo((width + lineWidth).toFloat(), (height + lineWidth).toFloat())
-                path.lineTo(-5f * lineWidth, (height + lineWidth).toFloat())
-                path.close()
+                pathBg.set(path)
+                val lastHeight = yRealValue[endIndex - 1].toFloat()
+                pathBg.lineTo((width + lineWidth).toFloat(), lastHeight)
+                pathBg.lineTo((width + lineWidth).toFloat(), startHeight)
+                pathBg.lineTo(-2f * lineWidth, startHeight)
+                pathBg.close()
             }
         }
     }
@@ -328,10 +308,13 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
                 }
             } else if (lifeState == 1) {
 
-                if(System.currentTimeMillis() - lastTime >= animMoveAllTime_2){
-                    synchronized(lock){
+                if (System.currentTimeMillis() - lastTime >= animMoveAllTime_2) {
+                    synchronized(lock) {
                         Log.i(TAG, "run: post invalidate() but no busy")
                         lock.wait()
+                    }
+                    if (lifeState == 0) {
+                        break
                     }
                 }
                 Log.i(TAG, "run: post invalidate()")
@@ -419,13 +402,42 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
     /**
      * 音量改变
      */
-    private fun changeMusicDB(field: Int) {
+    private fun changeMusicDB(value: Int) {
+
+        val state = (context as? LifecycleOwner)?.lifecycle?.currentState
+        state?.apply {
+            if (this != Lifecycle.State.RESUMED) {
+                return
+            }
+        }
+
+
+        val thisTime = System.currentTimeMillis()
+        val sum = thisTime - lastTime
+        if (sum <= limiTime) {
+            return
+        } else if (sum >= animMoveAllTime_2) {
+            synchronized(lock) {
+                lock.notify()
+            }
+        }
+
+        lastTime = thisTime
+
+        val field = if (value >= 120) {
+            120
+        } else if (value < 0) {
+            0
+        } else {
+            value
+        }
 
         if (musicDbLastValue == field) {
             return
         }
         musicDbLastValue = field
         if (!::yRealValue.isInitialized) {
+            Log.i(TAG, "changeMusicDB: yRealValue is not Initialize ")
             return
         }
 
@@ -456,7 +468,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
         /**
          * 检查下标
          */
-        val value =  if (checkPointState(index)) {
+        val value = if (checkPointState(index)) {
             height
         } else if (index < _11) {
             //当x在小于1/5范畴内时；对应（index,y）中 y值 = 高度(height) * 分贝的占比(db / 120f) * 随机小数范围（0.15 - 0.35）
@@ -549,25 +561,35 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
         const val CLOSE_END_POINT = 3
 
 
-        fun WaveLineView.simpleSetting():WaveCallBack {
+        fun WaveLineView.simpleSetting(firstLSet: Int = 0): WaveCallBack {
 
-//            automaticInvalidate = false
 
-            waveCallBack = object : WaveCallBack {
+            val callBack = object : WaveCallBack {
 
-                override fun onDbValueChange(db: Int, lastValues: Int, index: Int, size: Int):Int {
-                   return defaultValueChange(db, lastValues, index, size)
+                override fun onDbValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int {
+                    return defaultValueChange(db, lastValues, index, size)
                 }
 
                 override fun initRealValue(index: Int) = 0
 
                 override fun valueChangeByAutomaticInvalidate(value: Int) {
                     if (automaticInvalidate) {
-                        musicDb = value
+                        changeMusicDB(value)
                     }
                 }
 
             }
+
+            (context as? LifecycleOwner)?.lifecycle?.addObserver(object : DefaultLifecycleObserver {
+                override fun onResume(owner: LifecycleOwner) {
+                    post {
+                        callBack.valueChangeByAutomaticInvalidate(firstLSet)
+                    }
+                    owner.lifecycle.removeObserver(this)
+                }
+            })
+
+            waveCallBack = callBack
 
             return waveCallBack!!
         }
