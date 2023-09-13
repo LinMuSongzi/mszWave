@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.util.AttributeSet
 import android.view.View
+import android.view.ViewGroup
 import com.musongzi.waveline.ui.business.IDrawView
 import com.musongzi.waveline.ui.business.ICanvasTask
 
@@ -26,7 +27,6 @@ abstract class BaseDrawViewView<T : ICanvasTask>(context: Context?, attrs: Attri
 
 
     protected abstract fun createInstanceTask(): T
-
 
     override fun getHodlerContext(): Context {
         return context

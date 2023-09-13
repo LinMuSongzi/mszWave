@@ -1,6 +1,7 @@
 package com.musongzi.waveline.ui
 
 import android.content.Context.VIBRATOR_SERVICE
+import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -9,18 +10,22 @@ import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat.getSystemService
+import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.musongzi.waveline.R
+import com.musongzi.waveline.databinding.ActivityPathTest2Binding
+import com.musongzi.waveline.databinding.ActivityPathTestBinding
 import com.musongzi.waveline.ui.WaveLineView.Companion.simpleSetting
 
 
 class PathTestActivity : AppCompatActivity() {
 
-    lateinit var view: View
-    lateinit var waveLineView: WaveLineView
-    lateinit var dbTv: TextView
-    private var progress = 0f // 当前进度
+    //    lateinit var view: View
+//    lateinit var waveLineView: WaveLineView
+//    lateinit var dbTv: TextView
+//    private var progress = 0f // 当前进度?
+    lateinit var dataBinding: ActivityPathTestBinding
     var click = 0
 
     private val lock = Object()
@@ -37,10 +42,10 @@ class PathTestActivity : AppCompatActivity() {
                 waveCallBack?.valueChangeByAutomaticInvalidate(field)
                 if (Thread.currentThread() != Looper.getMainLooper().thread) {
                     runOnUiThread {
-                        dbTv.text = "$value DB"
+                        dataBinding.idDbTv.text = "$value DB"
                     }
                 } else {
-                    dbTv.text = "$value DB"
+                    dataBinding.idDbTv.text = "$value DB"
                 }
             }
         }
@@ -69,14 +74,21 @@ class PathTestActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_path_test)
+//        setContentView(R.layout.activity_path_test)
 
-        view = findViewById(R.id.id_lineview)
-        dbTv = findViewById(R.id.id_db_tv)
-        waveLineView = findViewById(R.id.id_lineview)
+        dataBinding = DataBindingUtil.setContentView(this, R.layout.activity_path_test)
 
-        waveCallBack = waveLineView.simpleSetting()
+//        view = findViewById(R.id.id_lineview)
+//        dbTv = findViewById(R.id.id_db_tv)
+//        waveLineView = findViewById(R.id.id_lineview)
+//
+        waveCallBack = dataBinding.idLineview.simpleSetting()
 
+
+        dataBinding.idMarkLineView.canvasTask.setTextColor(Color.WHITE)
+        dataBinding.idMarkLineView.canvasTask.setData(120 / 20) {
+            (120 - (it + 1) * 20).toString()
+        }
         runningMusicSet()
     }
 
