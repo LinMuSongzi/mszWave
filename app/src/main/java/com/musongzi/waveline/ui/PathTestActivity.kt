@@ -1,6 +1,7 @@
 package com.musongzi.waveline.ui
 
 import android.os.Bundle
+import android.os.Handler
 import android.os.Looper
 import android.os.Vibrator
 import android.view.View
@@ -21,8 +22,11 @@ class PathTestActivity : AppCompatActivity() {
 
     private val lock = Object()
 
+    val handler = Handler(Looper.getMainLooper())
+
     private var musicDb = -1
         set(value) {
+            handler.removeCallbacksAndMessages(null)
             if (value in 0..120) {
                 field = value
                 waveLineView.musicDb = field
@@ -36,6 +40,27 @@ class PathTestActivity : AppCompatActivity() {
             }
         }
 
+    val runnable减LongClick = object : Runnable {
+        override fun run() {
+            ++musicDb
+            vibrator()
+            handler.postDelayed(this, 100)
+        }
+    }
+
+    val runnable加LongClick = object : Runnable {
+        override fun run() {
+            ++musicDb
+            vibrator()
+            handler.postDelayed(this, 100)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        handler.removeCallbacksAndMessages(null)
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +69,16 @@ class PathTestActivity : AppCompatActivity() {
         view = findViewById(R.id.id_lineview)
         dbTv = findViewById(R.id.id_db_tv)
         waveLineView = findViewById(R.id.id_lineview)
+
+//        findViewById<View>(R.id.id_jia).apply {
+//            setOnGenericMotionListener(Gene)
+//        }
+//
+//
+//        findViewById<View>(R.id.id_jia).setOnLongClickListener {
+//            runnable减LongClick.run()
+//            true
+//        }
 
         runningMusicSet()
     }
@@ -110,8 +145,7 @@ class PathTestActivity : AppCompatActivity() {
         synchronized(lock) {
             click = 1
         }
-        val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
-        vibrator.vibrate(50)
+        vibrator()
         ++musicDb
     }
 
@@ -119,9 +153,13 @@ class PathTestActivity : AppCompatActivity() {
         synchronized(lock) {
             click = 1
         }
+        vibrator()
+        --musicDb
+    }
+
+    private fun vibrator() {
         val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
         vibrator.vibrate(50)
-        --musicDb
     }
 
 
