@@ -70,16 +70,6 @@ class PathTestActivity : AppCompatActivity() {
         dbTv = findViewById(R.id.id_db_tv)
         waveLineView = findViewById(R.id.id_lineview)
 
-//        findViewById<View>(R.id.id_jia).apply {
-//            setOnGenericMotionListener(Gene)
-//        }
-//
-//
-//        findViewById<View>(R.id.id_jia).setOnLongClickListener {
-//            runnable减LongClick.run()
-//            true
-//        }
-
         runningMusicSet()
     }
 

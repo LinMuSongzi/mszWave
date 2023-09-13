@@ -9,13 +9,11 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.util.AttributeSet
 import android.util.Log
-import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.OnLifecycleEvent
-import kotlin.math.log
 
 
 class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(context, attrs), Runnable, LifecycleObserver {
@@ -38,6 +36,8 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
 //    private lateinit var mRandom: java.util.Random
 
     var mOnDbChangeListner: OnDbChangeListner? = null
+
+    var executeListner: ExecuteListner? = null
 
     /**
      * 上一次绘制的最后的y值/动画的起始数组
@@ -78,6 +78,8 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
     val limiTime = 200L
     private var lastTime = 0L
     private val lineWidth = 2
+
+    private val pathThread = Thread(this,"wavePathName")
 
 
     /**
@@ -198,6 +200,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
             changeMusicDB(field)
         }
 
+//    fun change
 
     /**
      * 初始化[yRealValue] 与 [yValue]
@@ -207,13 +210,18 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
             return
         }
         synchronized(lock) {
+            var i = 0
             for (index in yValue.indices) {
-                val sunHeight = if (startHeight == 0f) height.toFloat() else startHeight
-                if (startHeight == 0f) {
-                    startHeight = sunHeight
+                if (mOnDbChangeListner == null) {
+                    val sunHeight = if (startHeight == 0f) height.toFloat() else startHeight
+                    if (startHeight == 0f) {
+                        startHeight = sunHeight
+                    }
+                    i = (startHeight - 1).toInt()
+                } else {
+                    i = mOnDbChangeListner!!.initRealValue(index)
                 }
-                val i = (startHeight - 1).toInt() //(sunHeight - musicDb / 60f * height * 0.25f * Math.random() * 0.5f).toInt()
-                yValue[index] = i //(sunHeight - ((musicDb / 120f) * Math.random() * 0.5 * height / 3f)).toInt()
+                yValue[index] = i
                 yRealValue[index] = i
             }
         }
@@ -239,8 +247,8 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
             thisYValue = IntArray(size)
             Log.i(TAG, "onDraw: mumber = $number , size = $size , size * mumber = ${size * number}")
             initYValue()
-            if (automaticInvalidate) {
-                Thread(this).start()
+            if (automaticInvalidate && !pathThread.isInterrupted) {
+                pathThread.start()
             }
         }
         synchronized(lock) {
@@ -252,15 +260,48 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
         }
     }
 
+//    fun
+
+
+    fun handlerPathLocationReal() {
+//        if(Thread.currentThread() != Mai)
+        synchronized(lock) {
+            automaticInvalidate = false
+            path.reset()
+            var endIndex = yValue.size
+            for (index in yValue.indices) {
+                val newValue = yRealValue[index]
+                if (newValue == Int.MIN_VALUE) {
+                    endIndex = index + 1
+                    break
+                }
+                thisYValue[index] = newValue
+            }
+            sumFiveMethod(thisYValue, endIndex)
+            if (pointMode == UN_CLOSE_POINT) {
+                path.lineTo((width + lineWidth).toFloat(), (height + lineWidth).toFloat())
+                path.lineTo(-5f * lineWidth, (height + lineWidth).toFloat())
+                path.close()
+            }
+        }
+//        if (isInvalidate) {
+        invalidate()
+//        }
+    }
+
     private fun handlerPathLocation(isInvalidate: Boolean = false) {
         synchronized(lock) {
             path.reset()
-
+            var endIndex = yValue.size
             for (index in yValue.indices) {
                 val newValue = getRealMixMusicDBYvalue(index)
+                if (newValue == Int.MIN_VALUE) {
+                    endIndex = index + 1
+                    break
+                }
                 thisYValue[index] = newValue
             }
-            sumFiveMethod(thisYValue)
+            sumFiveMethod(thisYValue, endIndex)
             if (pointMode == UN_CLOSE_POINT) {
                 path.lineTo((width + lineWidth).toFloat(), (height + lineWidth).toFloat())
                 path.lineTo(-5f * lineWidth, (height + lineWidth).toFloat())
@@ -302,7 +343,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
      * 期间直线区域则直接连线连接
      *
      */
-    private fun sumFiveMethod(yValue: IntArray): IntArray {
+    private fun sumFiveMethod(yValue: IntArray, endIndex: Int): IntArray {
         var index = 1
 
         var x1 = 0f
@@ -313,7 +354,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
         var y3: Float
         var x2: Float
         var y2: Float
-        while (index < yValue.size) {
+        while (index < endIndex) {
             x2 = (number * index).toFloat()
             y2 = getRealYvalue(yValue, index)
 
@@ -387,10 +428,11 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
          */
         synchronized(lock) {
             for (index in yRealValue.indices) {
-                yRealValue[index] = dbValueChange(field, index, yRealValue.size)
+                yRealValue[index] = dbValueChange(field, yRealValue[index], index, yRealValue.size)
                 yValue[index] = thisYValue[index]
             }
         }
+        executeListner?.onDbValueChange()
         Log.i(TAG, "changeMusicDB: musicdb = $field")
     }
 
@@ -399,9 +441,9 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
      * 如果实现了 [mOnDbChangeListner] 那么自己实现数组对应下表的值算法，如果为空则默认实现算法
      *
      */
-    private fun dbValueChange(db: Int, index: Int, size: Int): Int {
+    private fun dbValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int {
 
-        return (mOnDbChangeListner?.onDbValueChange(db, index, size) ?: let {
+        return (mOnDbChangeListner?.onDbValueChange(db, lastValues, index, size) ?: let {
             //将x轴拆分成5份
             val _11 = xMaxSize / 5f
             val _22 = _11 * 2
@@ -493,11 +535,12 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : BaseWaveView(conte
     }
 
     interface OnDbChangeListner {
-        fun onDbValueChange(db: Int, index: Int, size: Int): Int
+        fun onDbValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int
+        fun initRealValue(index: Int): Int
     }
 
-    interface ExecuteMode {
-
+    interface ExecuteListner {
+        fun onDbValueChange()
     }
 
 }
