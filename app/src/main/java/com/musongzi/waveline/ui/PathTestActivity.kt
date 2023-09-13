@@ -2,8 +2,12 @@ package com.musongzi.waveline.ui
 
 import android.os.Bundle
 import android.util.Log
+import android.view.TextureView
 import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import com.musongzi.waveline.R
 
 
@@ -11,6 +15,7 @@ class PathTestActivity : AppCompatActivity() {
 
     lateinit var view: View
     lateinit var waveLineView: WaveLineView
+    lateinit var dbTv : TextView
     private var progress = 0f // 当前进度
     var click = false
 
@@ -20,21 +25,33 @@ class PathTestActivity : AppCompatActivity() {
         setContentView(R.layout.activity_path_test)
 
         view = findViewById(R.id.id_lineview)
-
+        dbTv = findViewById(R.id.id_db_tv)
         waveLineView = findViewById(R.id.id_lineview)
 
-        Thread {
-            while (true) {
-                if (click) {
-                    Thread.sleep(3000)
-                    click = false
-                }
+        runningMusicSet()
+    }
 
+    private fun runningMusicSet() {
+        lifecycle.addObserver(object :DefaultLifecycleObserver{
+            override fun onResume(owner: LifecycleOwner) {
+                Thread {
+                    while (true) {
+                        if (click) {
+                            Thread.sleep(3000)
+                            click = false
+                        }
 
-                waveLineView.musicDb = (Math.random() * 120).toInt()
+                        Thread.sleep(500)
+                        waveLineView.musicDb = (Math.random() * 120).toInt().apply {
+                            runOnUiThread {
+                                dbTv.text = "${this@apply} DB"
+                            }
+                        }
+                    }
+                }.start()
+                owner.lifecycle.removeObserver(this)
             }
-        }.start()
-
+        })
     }
 
     fun lowClick(v: View?) {
@@ -52,11 +69,4 @@ class PathTestActivity : AppCompatActivity() {
         waveLineView.musicDb = (Math.random() * 30 + 90).toInt()
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (view.tag == null) {
-            Log.i("PathTestActivity", "onResume:11111 " + view.height)
-//            view.tag = PathTestDrawable(view)
-        }
-    }
 }

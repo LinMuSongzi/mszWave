@@ -19,7 +19,11 @@ import androidx.lifecycle.OnLifecycleEvent
 
 class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attrs), Runnable, LifecycleObserver {
 
+    override fun invalidate() {
+        super.invalidate()
+    }
 
+    var automaticInvalidate: Boolean = true
     var pointMode: Int = UN_CLOSE_POINT
 
     private val defaultHeightDp = 80
@@ -28,7 +32,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
     private var path = Path()
 
     private val lock = Object()
-    private lateinit var mRandom: java.util.Random
+//    private lateinit var mRandom: java.util.Random
 
     var mOnDbChangeListner: OnDbChangeListner? = null
 
@@ -103,11 +107,11 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
         isAntiAlias = true
     }
 
-     fun setWaveLineColor(color: Int) {
+    fun setWaveLineColor(color: Int) {
         wavePaint.color = color
     }
 
-     fun setInnerBgColor(color: Int) {
+    fun setInnerBgColor(color: Int) {
 
         paintBg.color = color
     }
@@ -189,8 +193,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
 
 
     override fun onDraw(canvas: Canvas) {
-        if (!this::mRandom.isInitialized) {
-            mRandom = java.util.Random()
+        if (!this::yRealValue.isInitialized) {
             val size = (width * 1f / number).let {
                 if (it > it.toInt()) {
                     (it + 2).toInt()
@@ -204,43 +207,50 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
             thisYValue = IntArray(size)
             Log.i(TAG, "onDraw: mumber = $number , size = $size , size * mumber = ${size * number}")
             initYValue()
-            Thread(this).start()
+            if (automaticInvalidate) {
+                Thread(this).start()
+            }
         }
-        canvas.drawPath(path, wavePaint)
-//        path.close()
-        canvas.drawPath(path, paintBg)
-        for (index in 1..10) {
-            canvas.drawLine(100f * index, height - 10f, 100f * index, 0f, strokePaint)
+        synchronized(lock) {
+            canvas.drawPath(path, wavePaint)
+            canvas.drawPath(path, paintBg)
+        }
+//        for (index in 1..10) {
+//            canvas.drawLine(100f * index, height - 10f, 100f * index, 0f, strokePaint)
+//        }
+    }
+
+    private fun handlerPathLocation(isInvalidate: Boolean = false) {
+        synchronized(lock) {
+            path.reset()
+
+            for (index in yValue.indices) {
+                val newValue = getRealMixMusicDBYvalue(index)
+                thisYValue[index] = newValue
+            }
+            sumFiveMethod(thisYValue)
+            if (pointMode == UN_CLOSE_POINT) {
+                path.lineTo((width + lineWidth).toFloat(), (height + lineWidth).toFloat())
+                path.lineTo(-5f * lineWidth, (height + lineWidth).toFloat())
+                path.close()
+            }
+        }
+        if (isInvalidate) {
+            invalidate()
         }
     }
 
-
     override fun run() {
 
-        while (true) {
-            path.reset()
-            synchronized(lock) {
-                for (index in yValue.indices) {
-                    val newValue = getRealMixMusicDBYvalue(index)
-                    thisYValue[index] = newValue
-                }
-                Log.i(TAG, "run: sumFiveMethod ")
-
-                sumFiveMethod(thisYValue)
-                if (pointMode == UN_CLOSE_POINT) {
-                    path.lineTo((width + lineWidth).toFloat(), (height + lineWidth).toFloat())
-                    path.lineTo(-5f*lineWidth, (height + lineWidth).toFloat())
-                    path.close()
-                }
-            }
-
-            synchronized(lock) {
-                if ((context as LifecycleOwner).lifecycle.currentState != Lifecycle.State.RESUMED) {
+        while (automaticInvalidate) {
+            handlerPathLocation()
+            if ((context as LifecycleOwner).lifecycle.currentState != Lifecycle.State.RESUMED) {
+                synchronized(lock) {
                     lock.wait()
-                } else {
-                    post {
-                        invalidate()
-                    }
+                }
+            } else {
+                post {
+                    invalidate()
                 }
             }
             Thread.sleep(sleepTime)
@@ -425,6 +435,10 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
 
     interface OnDbChangeListner {
         fun onDbValueChange(db: Int, index: Int, size: Int): Int
+    }
+
+    interface ExecuteMode {
+
     }
 
 }

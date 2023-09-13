@@ -60,6 +60,18 @@
 <!--        android:layout_width="match_parent"-->
 <!--        android:layout_height="150dp"/>-->
 
+
+    <TextView
+        android:id="@+id/id_db_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0db"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="20dp"
+        android:textColor="@color/white"
+        android:textSize="20dp"
+        android:layout_above="@+id/id_lineview"/>
+
     <com.musongzi.waveline.ui.WaveLineView
         android:id="@+id/id_lineview"
         android:layout_width="match_parent"
