@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Canvas
 import android.util.AttributeSet
 import android.view.View
-import android.view.ViewGroup
 import com.musongzi.waveline.ui.business.IDrawView
 import com.musongzi.waveline.ui.business.ICanvasTask
 
@@ -22,7 +21,7 @@ abstract class BaseDrawViewView<T : ICanvasTask>(context: Context?, attrs: Attri
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        canvasTask.draw(canvas)
+        canvasTask.drawTask(canvas)
     }
 
 
