@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
-import android.os.Build.VERSION_CODES.S
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
@@ -170,7 +169,8 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, generatedDefaultHeight())
         } else {
             val size = View.MeasureSpec.getSize(layoutParams.height)
-            if (size == 0) {
+//            val mode = MeasureSpec.getMode(layoutParams.height)
+            if (size == 0 && layoutParams.height != -1) {
                 layoutParams.height = generatedDefaultHeight()
             }
         }
@@ -216,9 +216,9 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
 
 
     override fun onDraw(canvas: Canvas) {
-        for (index in 1..xMaxSize) {
-            canvas.drawLine(100f * index, height - 10f, 100f * index, 0f, strokePaint)
-        }
+//        for (index in 1..xMaxSize) {
+//            canvas.drawLine(100f * index, height - 10f, 100f * index, 0f, strokePaint)
+//        }
 
         //初始化参数，这里可以拿到高度
         if (!this::yRealValue.isInitialized) {
@@ -336,9 +336,9 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
                 }
 //                if (catch == null || animL <= animMoveAllTime) {
 //                    Log.i(TAG, "run: post invalidate() now")
-                    post {
-                        invalidate()
-                    }
+                post {
+                    invalidate()
+                }
 //                }
                 Thread.sleep(sleepTime)
             }
@@ -574,7 +574,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
 
 
     companion object {
-        const val TAG = "PathTestDrawable"
+        const val TAG = "WaveLineView"
         const val UN_CLOSE_POINT = 0
         const val CLOSE_START_POINT = 1
         const val CLOSE_START_AND_END_POINT = 2
