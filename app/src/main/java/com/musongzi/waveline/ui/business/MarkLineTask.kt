@@ -12,7 +12,7 @@ class MarkLineTask(canvas: IDrawView) : CanvasTask(canvas) {
     private val textPaint = Paint().apply {
         color = Color.BLACK
         style = Paint.Style.FILL
-        textSize = (getHodlerContext().resources.displayMetrics.densityDpi / 160 * 20).toFloat()
+        textSize = (getHodlerContext().resources.displayMetrics.densityDpi / 160 * 15).toFloat()
         isDither = true
         //抗锯齿，降低分辨率，提高绘制效率
         isAntiAlias = true

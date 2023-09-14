@@ -28,14 +28,14 @@ class PathTestActivity : AppCompatActivity() {
 
     val handler = Handler(Looper.getMainLooper())
 
-    var waveCallBack: WaveLineView.WaveCallBack? = null
+//    var waveCallBack: WaveLineView.WaveCallBack? = null
 
     private var musicDb = -1
         set(value) {
             handler.removeCallbacksAndMessages(null)
             if (value in 0..120) {
                 field = value
-                waveCallBack?.changeValuesAndInvalidate(field)
+                //waveCallBack?.changeValuesAndInvalidate(field)
                 if (Thread.currentThread() != Looper.getMainLooper().thread) {
                     runOnUiThread {
                         dataBinding.idDbTv.text = "$value DB"
@@ -78,7 +78,7 @@ class PathTestActivity : AppCompatActivity() {
 //        dbTv = findViewById(R.id.id_db_tv)
 //        waveLineView = findViewById(R.id.id_lineview)
 //
-        waveCallBack = dataBinding.idLineview.createSampleCallBack()
+//        waveCallBack = dataBinding.idLineview.createSampleCallBack()
 
 
         dataBinding.idMarkLineView.canvasTask.setTextColor(Color.WHITE)
@@ -91,22 +91,28 @@ class PathTestActivity : AppCompatActivity() {
     private fun runningMusicSet() {
         lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onResume(owner: LifecycleOwner) {
-                Thread {
-                    while (true) {
-                        if (click == 1) {
-                            synchronized(lock) {
-                                if (click == 1) {
-                                    lock.wait()
-                                }
-                            }
-                        }
-
-                        Thread.sleep((((Math.random() * 0.1 + 0.2) * 400).toLong()))
-                        (Math.random() * 120).toInt().apply {
-                            musicDb = this
-                        }
+//                Thread {
+//                    while (true) {
+//                        if (click == 1) {
+//                            synchronized(lock) {
+//                                if (click == 1) {
+//                                    lock.wait()
+//                                }
+//                            }
+//                        }
+//
+//                        Thread.sleep((((Math.random() * 0.1 + 0.2) * 400).toLong()))
+//                        (Math.random() * 120).toInt().apply {
+//                            musicDb = this
+//                        }
+//                    }
+//                }.start()
+                dataBinding.idLineview.catchValueListener = object :WaveLineView.CatchValueListener{
+                    override fun catchValue(): Int {
+                        return musicDb
                     }
-                }.start()
+                }
+
                 owner.lifecycle.removeObserver(this)
             }
         })

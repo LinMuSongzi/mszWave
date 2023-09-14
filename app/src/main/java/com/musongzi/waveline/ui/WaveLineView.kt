@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
+import android.os.Build.VERSION_CODES.S
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
@@ -26,6 +27,8 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
 
     var automaticInvalidate: Boolean = true
     var pointMode: Int = UN_CLOSE_POINT
+
+    var catchValueListener: CatchValueListener? = null
 
     private val defaultHeightDp = 80
     private var valuesYValueAnimator: ValueAnimator? = null
@@ -75,7 +78,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
      * x坐标的数目
      */
     private var xMaxSize = 0
-    private val sleepTime = 50L
+    private val sleepTime = 25L
     private val animMoveAllTime = 400f
     private val animMoveAllTime_2 = 600
     val limiTime = 200L
@@ -298,8 +301,17 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
     }
 
     override fun run() {
-
+        var lastTT = 0L
+        var catch: Int? = null;
         while (automaticInvalidate) {
+
+            catchValueListener?.catchValue()?.apply {
+                changeMusicDB(this)
+                if (catch != this) {
+                    catch = this
+                    lastTT = System.currentTimeMillis()
+                }
+            }
 
             handlerPathLocation()
             if (lifeState == 0) {
@@ -310,20 +322,24 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
                     }
                 }
             } else if (lifeState == 1) {
-
-                if (System.currentTimeMillis() - lastTime >= animMoveAllTime_2) {
+                val thisTime = System.currentTimeMillis()
+                val l = thisTime - lastTime
+                val animL = thisTime - lastTT
+                if (l >= animMoveAllTime_2) {
                     synchronized(lock) {
-                        Log.i(TAG, "run: post invalidate() but no busy")
+                        Log.i(TAG, "run: post invalidate() but no busy , l = $l")
                         lock.wait()
                     }
                     if (lifeState == 0) {
                         break
                     }
                 }
-                Log.i(TAG, "run: post invalidate()")
-                post {
-                    invalidate()
-                }
+//                if (catch == null || animL <= animMoveAllTime) {
+//                    Log.i(TAG, "run: post invalidate() now")
+                    post {
+                        invalidate()
+                    }
+//                }
                 Thread.sleep(sleepTime)
             }
         }
@@ -408,12 +424,12 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
      */
     fun changeMusicDB(value: Int) {
 
-        val state = (context as? LifecycleOwner)?.lifecycle?.currentState
-        state?.apply {
-            if (this != Lifecycle.State.RESUMED) {
-                return
-            }
-        }
+//        val state = (context as? LifecycleOwner)?.lifecycle?.currentState
+//        state?.apply {
+//            if (this != Lifecycle.State.RESUMED) {
+//                return
+//            }
+//        }
 
 
         val thisTime = System.currentTimeMillis()
@@ -605,14 +621,21 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
     interface WaveCallBack {
         fun onValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int
 
-        fun initRealValue(index: Int): Int{
+        fun initRealValue(index: Int): Int {
             return 0;
         }
+
         fun changeValuesAndInvalidate(value: Int)
         fun onFirstDraw(size: Int) {
 
         }
     }
+
+    interface CatchValueListener {
+
+        fun catchValue(): Int
+    }
+
 
     interface ExecuteListner {
         fun onDbValueChange()
