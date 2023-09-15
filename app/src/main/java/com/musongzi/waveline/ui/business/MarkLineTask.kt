@@ -32,7 +32,7 @@ class MarkLineTask(canvas: IDrawView) : CanvasTask(canvas) {
 
     private var valueArray: Array<CharSequence>? = null
 
-    override fun drawTask(canvas: Canvas) {
+    override fun drawSecond(canvas: Canvas) {
         valueArray?.apply {
 
             for (index in indices) {

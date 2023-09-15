@@ -8,7 +8,10 @@ interface IDrawView : IHolderContext {
 
     fun getLayoutParams(): ViewGroup.LayoutParams?
 
-    fun getHeight():Int
+    fun getHeight(): Int
 
-    fun getWidth():Int
+    fun getWidth(): Int
+
+
+
 }

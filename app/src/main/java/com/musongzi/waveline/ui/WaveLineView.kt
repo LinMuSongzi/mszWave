@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
-import android.os.Looper
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
@@ -17,11 +16,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.OnLifecycleEvent
-import com.musongzi.waveline.ui.business.ICanvasTask
-import com.musongzi.waveline.ui.itf.IValueChange
 
 
-class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attrs), Runnable, LifecycleObserver, ICanvasTask {
+class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attrs), Runnable, LifecycleObserver {
 
 //    override fun invalidate() {
 //        super.invalidate()
@@ -40,12 +37,9 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
     private var path = Path()
     private var pathBg = Path()
     private val lock = Object()
+//    private lateinit var mRandom: java.util.Random
 
     var waveCallBack: WaveCallBack? = null
-
-    private val nativeCanvasTasks = mutableListOf<ICanvasTask?>().apply {
-        add(this@WaveLineView)
-    }
 
     var executeListner: ExecuteListner? = null
 
@@ -92,13 +86,6 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
 
     private val pathThread = Thread(this, "wavePathName")
 
-    fun registerCanvasTask(canvasTak: ICanvasTask) {
-        nativeCanvasTasks.add(canvasTak)
-    }
-
-    fun removeCanvasTask(canvasTak: ICanvasTask) {
-        nativeCanvasTasks.remove(canvasTak)
-    }
 
     /**
      * 水纹的画笔
@@ -229,15 +216,44 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
 
 
     override fun onDraw(canvas: Canvas) {
-        for (task in nativeCanvasTasks) {
-            task?.drawTask(canvas)
+//        for (index in 1..xMaxSize) {
+//            canvas.drawLine(100f * index, height - 10f, 100f * index, 0f, strokePaint)
+//        }
+
+        //初始化参数，这里可以拿到高度
+        if (!this::yRealValue.isInitialized) {
+
+            //构建y值数组长度，也就是x坐标个数
+            val size = (width * 1f / number).let {
+                if (it > it.toInt()) {
+                    (it + 2).toInt()
+                } else {
+                    (it + 1).toInt()
+                }
+
+            }
+            xMaxSize = size
+            yValue = IntArray(size)
+            yRealValue = IntArray(size)
+            thisYValue = IntArray(size)
+            Log.i(TAG, "onDraw: mumber = $number , size = $size , size * mumber = ${size * number}")
+            initYValue()
+            waveCallBack?.onFirstDraw(size)
+            if (automaticInvalidate && !pathThread.isInterrupted) {
+                pathThread.start()
+            }
         }
+        synchronized(lock) {
+            canvas.drawPath(path, wavePaint)
+            canvas.drawPath(pathBg, paintBg)
+        }
+
     }
 
 //    fun
 
 
-    fun drawPathLocationReal() {
+    fun handlerPathLocationReal() {
         synchronized(lock) {
             automaticInvalidate = false
             path.reset()
@@ -251,29 +267,16 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
                 thisYValue[index] = newValue
             }
             sumFiveMethod(thisYValue, endIndex)
-            closePathEnd(endIndex)
-        }
-        if(Thread.currentThread() != Looper.getMainLooper().thread) {
-            post {
-                invalidate()
+            if (pointMode == UN_CLOSE_POINT) {
+                path.lineTo((width + lineWidth).toFloat(), (height + lineWidth).toFloat())
+                path.lineTo(-5f * lineWidth, (height + lineWidth).toFloat())
+                path.close()
             }
-        }else{
-            invalidate()
         }
+        invalidate()
     }
 
-    private fun closePathEnd(endIndex: Int) {
-        if (pointMode == UN_CLOSE_POINT) {
-            pathBg.set(path)
-            val lastHeight = yRealValue[endIndex - 1].toFloat()
-            pathBg.lineTo((width + lineWidth).toFloat(), lastHeight)
-            pathBg.lineTo((width + lineWidth).toFloat(), startHeight)
-            pathBg.lineTo(-2f * lineWidth, startHeight)
-            pathBg.close()
-        }
-    }
-
-    private fun drawPathLocation() {
+    private fun handlerPathLocation() {
         synchronized(lock) {
             path.reset()
             var endIndex = yValue.size
@@ -286,7 +289,14 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
                 thisYValue[index] = newValue
             }
             sumFiveMethod(thisYValue, endIndex)
-            closePathEnd(endIndex)
+            if (pointMode == UN_CLOSE_POINT) {
+                pathBg.set(path)
+                val lastHeight = yRealValue[endIndex - 1].toFloat()
+                pathBg.lineTo((width + lineWidth).toFloat(), lastHeight)
+                pathBg.lineTo((width + lineWidth).toFloat(), startHeight)
+                pathBg.lineTo(-2f * lineWidth, startHeight)
+                pathBg.close()
+            }
         }
     }
 
@@ -303,7 +313,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
                 }
             }
 
-            drawPathLocation()
+            handlerPathLocation()
             if (lifeState == 0) {
                 synchronized(lock) {
                     if (lifeState == 0 && automaticInvalidate) {
@@ -412,8 +422,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
      * 音量改变
      * 要在onresume中使用
      */
-    @JvmOverloads
-    fun changeMusicDB(value: Int, isAllowEqu: Boolean = false) {
+    fun changeMusicDB(value: Int) {
 
 //        val state = (context as? LifecycleOwner)?.lifecycle?.currentState
 //        state?.apply {
@@ -443,7 +452,7 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
             value
         }
 
-        if (musicDbLastValue == field && !isAllowEqu) {
+        if (musicDbLastValue == field) {
             return
         }
         musicDbLastValue = field
@@ -591,10 +600,6 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
                     }
                 }
 
-                override fun onFirstDraw(size: Int) {
-
-                }
-
             }
 
             (context as? LifecycleOwner)?.lifecycle?.addObserver(object : DefaultLifecycleObserver {
@@ -613,18 +618,17 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
 
     }
 
-    interface WaveCallBack : IValueChange<Int> {
-//        fun onValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int
+    interface WaveCallBack {
+        fun onValueChange(db: Int, lastValues: Int, index: Int, size: Int): Int
 
-        @JvmDefault
         fun initRealValue(index: Int): Int {
             return 0;
         }
 
         fun changeValuesAndInvalidate(value: Int)
+        fun onFirstDraw(size: Int) {
 
-        @JvmDefault
-        fun onFirstDraw(size: Int)
+        }
     }
 
     interface CatchValueListener {
@@ -635,36 +639,6 @@ class WaveLineView(context: Context?, attrs: AttributeSet?) : View(context, attr
 
     interface ExecuteListner {
         fun onDbValueChange()
-    }
-
-    override fun drawTask(canvas: Canvas) {
-        //初始化参数，这里可以拿到高度
-        if (!this::yRealValue.isInitialized) {
-
-            //构建y值数组长度，也就是x坐标个数
-            val size = (width * 1f / number).let {
-                if (it > it.toInt()) {
-                    (it + 2).toInt()
-                } else {
-                    (it + 1).toInt()
-                }
-
-            }
-            xMaxSize = size
-            yValue = IntArray(size)
-            yRealValue = IntArray(size)
-            thisYValue = IntArray(size)
-            Log.i(TAG, "onDraw: mumber = $number , size = $size , size * mumber = ${size * number}")
-            initYValue()
-            waveCallBack?.onFirstDraw(size)
-            if (automaticInvalidate && !pathThread.isInterrupted) {
-                pathThread.start()
-            }
-        }
-        synchronized(lock) {
-            canvas.drawPath(path, wavePaint)
-            canvas.drawPath(pathBg, paintBg)
-        }
     }
 
 }
