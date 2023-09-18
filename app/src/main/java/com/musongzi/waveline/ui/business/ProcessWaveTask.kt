@@ -38,12 +38,12 @@ class ProcessWaveTask(context: IDrawView) : CanvasTask(context) {
     /**
      * 横坐标的数组数量，可变
      */
-    private var number = 40
+    var number = 40
 
     /**
      * x坐标的数目
      */
-    private var xMaxSize = 0
+    var maxSize = 0
     private val sleepTime = 25L
     private val animMoveAllTime = 400f
     private val animMoveAllTime_2 = 600
@@ -55,6 +55,20 @@ class ProcessWaveTask(context: IDrawView) : CanvasTask(context) {
     private val lock = Object()
 
     var valueChange: IValueChange<Int>? = null
+
+
+    fun setWaveLineColor(color: Int) {
+        wavePaint.color = color
+    }
+
+    fun setWaveLineWidth(width: Float) {
+        wavePaint.strokeWidth = width
+    }
+
+    fun setInnerBgColor(color: Int) {
+        paintBg.color = color
+    }
+
 
     /**
      * 水纹的画笔
@@ -82,7 +96,7 @@ class ProcessWaveTask(context: IDrawView) : CanvasTask(context) {
 
     override fun onPreprae(canvas: Canvas) {
         //构建y值数组长度，也就是x坐标个数
-        val size = (getWidth() * 1f / number).let {
+        val size = (getWidth() * 1.0 / number).let {
             if (it > it.toInt()) {
                 (it + 2).toInt()
             } else {
@@ -90,12 +104,52 @@ class ProcessWaveTask(context: IDrawView) : CanvasTask(context) {
             }
 
         }
-        xMaxSize = size
+        startHeight = if (startHeight == 0f) getHeight().toFloat() else startHeight
+        maxSize = size
         yValue = IntArray(size)
         yRealValue = IntArray(size)
         thisYValue = IntArray(size)
         Log.i(WaveLineView.TAG, "onDraw: mumber = $number , size = $size , size * mumber = ${size * number}")
         reset()
+        needDraw()
+    }
+
+    fun reset() {
+        initYValue();
+    }
+
+    private fun initYValue() {
+        if (valueChange != null) {
+            for (index in yRealValue.indices) {
+                yRealValue[index] = valueChange?.onValueChange(yValue[index], thisYValue[index], index, maxSize)!!
+                yValue[index] = yRealValue[index]
+            }
+        } else {
+            for (index in yValue.indices) {
+                yRealValue[index] = EMPTY_VALUE
+                yValue[index] = yRealValue[index]
+            }
+        }
+    }
+
+    fun changeValues(values: IntArray, start: Int, end: Int) {
+        if (start > end || start > values.size || end == 0) {
+            return
+        }
+        for (index in start until end) {
+            yRealValue[index] = values[start]
+        }
+        needDraw()
+    }
+
+    fun changeSingleValue(value: Int, index: Int) {
+        Log.i(TAG, "changeSingleValue: value = $value , index = $index")
+        yRealValue[index] = value
+        needDraw()
+        invalidate()
+    }
+
+    private fun needDraw() {
         path.reset()
         var endIndex = yValue.size
         for (index in yValue.indices) {
@@ -107,23 +161,12 @@ class ProcessWaveTask(context: IDrawView) : CanvasTask(context) {
             thisYValue[index] = newValue
         }
         drawPathLine(thisYValue, endIndex)
-    }
-
-    fun reset() {
-        initYValue();
-    }
-
-    private fun initYValue() {
-        if (valueChange != null) {
-            for (index in yRealValue.indices) {
-                yRealValue[index] = valueChange?.onValueChange(yValue[index], thisYValue[index], index, xMaxSize)!!
-                yValue[index] = yRealValue[index]
-            }
-        } else {
-            for (index in yValue.indices) {
-                yRealValue[index] = EMPTY_VALUE
-                yValue[index] = yRealValue[index]
-            }
+        pathBg.reset()
+        pathBg.set(path)
+        if (endIndex > 0 && endIndex <= thisYValue.size) {
+            pathBg.lineTo((endIndex * number).toFloat(), startHeight)
+            pathBg.lineTo(0f, startHeight)
+            pathBg.close()
         }
     }
 
@@ -174,7 +217,7 @@ class ProcessWaveTask(context: IDrawView) : CanvasTask(context) {
 
 
 
-            if (index + 1 >= yValue.size) {
+            if (index + 1 >= endIndex) {
                 path.lineTo(x2, y2)
 //                Log.i(TAG, "sumFiveMethod: 3 path.lineTo($x2, $y2)")
                 break
@@ -190,7 +233,7 @@ class ProcessWaveTask(context: IDrawView) : CanvasTask(context) {
             path.quadTo(x2, y2, aX, aY)
 //            Log.i(TAG, "sumFiveMethod: 4 path.quadTo($x2, $y2, $aX, $aY)")
 
-            if (index + 2 < yValue.size) {
+            if (index + 2 < endIndex) {
                 if ((y3 < y2 && getRealYvalue(yValue, index + 2) < y3) || (y3 > y2 && getRealYvalue(yValue, index + 2) > y3)) {
                     path.lineTo(x3, y3)
 //                    Log.i(TAG, "sumFiveMethod: 5 path.lineTo($x3, $y3)")
@@ -216,6 +259,7 @@ class ProcessWaveTask(context: IDrawView) : CanvasTask(context) {
     }
 
     companion object {
+        const val TAG = "ProcessWaveTask"
         const val EMPTY_VALUE = Int.MIN_VALUE
     }
 

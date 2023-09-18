@@ -2,6 +2,7 @@ package com.musongzi.waveline.ui
 
 import android.content.Context
 import android.graphics.Canvas
+import android.os.Looper
 import android.util.AttributeSet
 import android.view.View
 import com.musongzi.waveline.ui.business.IDrawView
@@ -22,6 +23,16 @@ abstract class BaseDrawViewView<T : ICanvasTask>(context: Context?, attrs: Attri
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         canvasTask.drawTask(canvas)
+    }
+
+    override fun invalidate() {
+        if (Thread.currentThread() != Looper.getMainLooper().thread) {
+            post {
+                super.invalidate()
+            }
+        } else {
+            super.invalidate()
+        }
     }
 
 
