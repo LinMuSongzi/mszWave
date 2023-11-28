@@ -13,11 +13,21 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Wave"
+        android:theme="@style/AppTheme"
         tools:targetApi="31">
-<!--        <activity-->
-<!--            android:name=".ui.TestActivity"-->
-<!--            android:exported="false" />-->
+        <activity
+            android:label="@string/app_name"
+            android:name=".ui.ViewpageActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <!-- <activity -->
+        <!-- android:name=".ui.TestActivity" -->
+        <!-- android:exported="false" /> -->
         <!-- <activity -->
         <!-- android:name=".ui.ProcessWaveActivity" -->
         <!-- android:exported="false" /> -->
@@ -27,17 +37,17 @@
         <!-- <activity -->
         <!-- android:name=".ui.PathTest2Activity" -->
         <!-- android:exported="false" /> -->
-        <activity
-            android:name=".ui.TestActivity"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/AppThemeNoActionBar">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+<!--        <activity-->
+<!--            android:name=".ui.TestActivity"-->
+<!--            android:exported="true"-->
+<!--            android:label="@string/app_name"-->
+<!--            android:theme="@style/AppThemeNoActionBar">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
+<!--        </activity>-->
     </application>
 
 </manifest>
